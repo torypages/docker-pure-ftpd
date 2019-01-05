@@ -18,15 +18,16 @@ deb-src http://security.debian.org stretch/updates main\n\
 RUN apt-get -y update && \
 	apt-get -y --force-yes --fix-missing install dpkg-dev debhelper &&\
 	apt-get -y build-dep pure-ftpd &&\
-	apt-get -y install openbsd-inetd rsyslog
+	apt-get -y install openbsd-inetd rsyslog &&\
+        apt-get -y install vim procps python3
 
 # build from source to add --without-capabilities flag
 RUN mkdir /tmp/pure-ftpd/ && \
 	cd /tmp/pure-ftpd/ && \
 	apt-get source pure-ftpd && \
 	cd pure-ftpd-* && \
-	./configure --with-tls | grep -v '^checking' | grep -v ': Entering directory' | grep -v ': Leaving directory' && \
-	sed -i '/^optflags=/ s/$/ --without-capabilities/g' ./debian/rules && \
+	./configure --with-tls --with-uploadscript | grep -v '^checking' | grep -v ': Entering directory' | grep -v ': Leaving directory' && \
+	sed -i '/^optflags=/ s/$/ --without-capabilities --with-uploadscript/g' ./debian/rules && \
 	dpkg-buildpackage -b -uc | grep -v '^checking' | grep -v ': Entering directory' | grep -v ': Leaving directory'
 
 # install the new deb files
@@ -55,6 +56,12 @@ ENV PUBLICHOST localhost
 
 # couple available volumes you may want to use
 VOLUME ["/home/ftpusers", "/etc/pure-ftpd/passwd"]
+
+# Copy in upload related config
+COPY pure-ftpd-common /etc/default/pure-ftpd-common
+COPY CallUploadScript /etc/pure-ftpd/conf/CallUploadScript
+
+COPY onupload /etc/pure-ftpd/onupload
 
 # startup
 CMD /run.sh -l puredb:/etc/pure-ftpd/pureftpd.pdb -E -j -R -P $PUBLICHOST

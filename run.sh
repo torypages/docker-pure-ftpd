@@ -55,7 +55,7 @@ then
     PWD_FILE="$(mktemp)"
     echo "$FTP_USER_PASS
 $FTP_USER_PASS" > "$PWD_FILE"
-    
+
     # Set uid/gid
     PURE_PW_ADD_FLAGS=""
     if [ ! -z "$FTP_USER_UID" ]
@@ -134,9 +134,28 @@ then
     PURE_FTPD_FLAGS="$PURE_FTPD_FLAGS -C $FTP_MAX_CONNECTIONS"
 fi
 
+#echo "yes" > /etc/pure-ftpd/conf/CallUploadScript
+#echo "#!/bin/bash" > /etc/pure-ftpd/file_logger.sh
+#echo 'touch /tmp/hahaha.txt' >> /etc/pure-ftpd/file_logger.sh
+
+chmod 755 /etc/pure-ftpd/onupload
+
+
+UPLOAD_PIPE=/var/run/pure-ftpd.upload.pipe
+touch UPLOAD_PIPE
+if [ ! -z "$FTP_USER_UID" ]
+then
+    chown $FTP_USER_UID:$FTP_USER_UID $UPLOAD_PIPE
+else
+    chown ftp_user:ftp_user $UPLOAD_PIPE
+fi
+
+PURE_FTPD_FLAGS="$PURE_FTPD_FLAGS -o"
+
 # let users know what flags we've ended with (useful for debug)
 echo "Starting Pure-FTPd:"
 echo "  pure-ftpd $PURE_FTPD_FLAGS"
 
 # start pureftpd with requested flags
-exec /usr/sbin/pure-ftpd $PURE_FTPD_FLAGS
+pure-uploadscript -r /etc/pure-ftpd/onupload &
+exec /usr/sbin/pure-ftpd $PURE_FTPD_FLAGS -I 1
